@@ -168,6 +168,4 @@ contract Mira is Ownable, ReentrancyGuard, ERC721A {
   function setBaseURI(string calldata baseURI) external onlyOwner {
     _baseTokenURI = baseURI;
   }
-
-  fallback() external payable {}
 }
