@@ -13,11 +13,9 @@ contract ContractTest is DSTestPlus {
     uint256 public allowlistMaxMint = 3;
     uint256 public publicMaxMint = 3;
     uint256 public collectionSize = 10000;
-    uint256 public price = 1;
+    uint256 public price = 1 wei;
     bytes32 public merkleRoot =
         0xc7b446a7bb5ff3ddb5be4b1e5540590bd76d810ec4b40d89afd926707410e218;
-    uint256 public constant AUCTION_START_PRICE = 1 ether;
-    uint256 public constant AUCTION_END_PRICE = 0.15 ether;
     uint256 public receivedEther = 0;
     string private _baseTokenURI = "";
 
@@ -49,6 +47,20 @@ contract ContractTest is DSTestPlus {
         assert(mira.allowlistMaxMint() == allowlistMaxMint);
         assert(mira.publicMaxMint() == publicMaxMint);
         assert(mira.price() == price);
+    }
+
+    // @notice Test additional metadata sanity checks
+    function testConfigSanity() public {
+        // assert(
+        //     mira.AUCTION_START_PRICE() >=
+        //         mira.AUCTION_DROP_PER_STEP() * mira.AUCTION_DROP_INTERVAL()
+        // );
+
+        mira.setAuctionStart(uint32(block.timestamp - 10 seconds));
+        console.log(mira.getTimeTillDrop());
+
+        mira.setAuctionStart(uint32(block.timestamp + 10 seconds));
+        console.log(mira.getTimeTillDrop());
     }
 
     // @notice Test allowlist minting with merkle tree validation
@@ -122,6 +134,7 @@ contract ContractTest is DSTestPlus {
         assert(mira.allowlistClaimed(address(1337)) == uint256(3));
     }
 
+    // @notice Test owner withdraw
     function testWithdraw() public {
         // Non-owner shouldn't be able to withdraw
         hoax(address(0xBEEF), address(0xBEEF));
@@ -148,6 +161,7 @@ contract ContractTest is DSTestPlus {
         assert(afterBalance - beforeBalance == uint256(2));
     }
 
+    // @notice Test offchain signature validation
     function testSignature() public {
         startHoax(
             address(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4),
@@ -183,6 +197,7 @@ contract ContractTest is DSTestPlus {
         vm.stopPrank();
     }
 
+    // @notice Test public sale signed mint
     function testSignedMint() public {
         startHoax(
             address(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4),
@@ -236,6 +251,9 @@ contract ContractTest is DSTestPlus {
         mira.mintPublicSale{value: 1}(uint256(1), senderHash, fakeSignature);
 
         // Ensure successful mint provided correct credentials
+        vm.expectRevert(
+            abi.encodePacked(bytes4(keccak256("InsufficientValue()")))
+        );
         mira.mintPublicSale{value: 1}(uint256(1), senderHash, signature);
         vm.stopPrank();
     }

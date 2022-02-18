@@ -41,8 +41,10 @@ contract Mira is Ownable, ReentrancyGuard, ERC721A {
 
     string private _baseTokenURI;
 
-    uint256 public constant AUCTION_START_PRICE = 1 ether;
-    uint256 public constant AUCTION_END_PRICE = 0.15 ether;
+    uint32 public auctionSaleStartTime;
+
+    uint256 public constant AUCTION_START_PRICE = 150 wei;
+    uint256 public constant AUCTION_END_PRICE = 15 wei;
     uint256 public constant AUCTION_PRICE_CURVE_LENGTH = 340 minutes;
     uint256 public constant AUCTION_DROP_INTERVAL = 20 minutes;
     uint256 public constant AUCTION_DROP_PER_STEP =
@@ -141,6 +143,8 @@ contract Mira is Ownable, ReentrancyGuard, ERC721A {
         // uint256 publicSaleKey = uint256(config.publicSaleKey);
         // uint256 publicPrice = uint256(config.publicPrice);
         // uint256 publicSaleStartTime = uint256(config.publicSaleStartTime);
+        uint256 price = getAuctionPrice();
+
         if (!(verify(_hash, _signature))) revert NotAuthorized();
         if (publicClaimed[msg.sender] + _quantity > publicMaxMint)
             revert AlreadyMinted();
@@ -150,27 +154,47 @@ contract Mira is Ownable, ReentrancyGuard, ERC721A {
         publicClaimed[msg.sender] += _quantity;
 
         _safeMint(msg.sender, _quantity);
+        uint256 refund = msg.value - price;
+        if (refund > 0) {
+            payable(msg.sender).transfer(refund);
+        }
     }
 
-    //   function getAuctionPrice(uint256 saleStartTime)
-    //     public
-    //     view
-    //     returns (uint256)
-    //   {
-    //     if (block.timestamp < saleStartTime) {
-    //       return AUCTION_START_PRICE;
-    //     }
-    //     if (block.timestamp - saleStartTime >= AUCTION_PRICE_CURVE_LENGTH) {
-    //       return AUCTION_END_PRICE;
-    //     } else {
-    //       uint256 steps = (block.timestamp - saleStartTime) / AUCTION_DROP_INTERVAL;
-    //       return AUCTION_START_PRICE - (steps * AUCTION_DROP_PER_STEP);
-    //     }
-    //   }
+    function getAuctionPrice() public view returns (uint256) {
+        if (block.timestamp < auctionSaleStartTime) {
+            return AUCTION_START_PRICE;
+        }
+        if (
+            block.timestamp - auctionSaleStartTime >= AUCTION_PRICE_CURVE_LENGTH
+        ) {
+            return AUCTION_END_PRICE;
+        } else {
+            uint256 steps = (block.timestamp - auctionSaleStartTime) /
+                AUCTION_DROP_INTERVAL;
+            return AUCTION_START_PRICE - (steps * AUCTION_DROP_PER_STEP);
+        }
+    }
 
-    //   function setAuctionStart(uint32 timestamp) external onlyOwner {
-    //     saleConfig.auctionSaleStartTime = timestamp;
-    //   }
+    function getTimeTillDrop() public view returns (uint256) {
+        if (block.timestamp < auctionSaleStartTime) {
+            return 0;
+        }
+        if (
+            block.timestamp - auctionSaleStartTime >= AUCTION_PRICE_CURVE_LENGTH
+        ) {
+            return 0;
+        } else {
+            uint256 steps = (block.timestamp - auctionSaleStartTime) /
+                AUCTION_DROP_INTERVAL;
+            uint256 timeTillNextStep = ((steps + 1) * AUCTION_DROP_INTERVAL) -
+                (block.timestamp - auctionSaleStartTime);
+            return timeTillNextStep;
+        }
+    }
+
+    function setAuctionStart(uint32 timestamp) external onlyOwner {
+        auctionSaleStartTime = timestamp;
+    }
 
     //   function setPublicSaleKey(uint32 key) external onlyOwner {
     //     saleConfig.publicSaleKey = key;
