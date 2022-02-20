@@ -50,17 +50,16 @@ contract ContractTest is DSTestPlus {
     }
 
     // @notice Test additional metadata sanity checks
-    function testConfigSanity() public {
-        // assert(
-        //     mira.AUCTION_START_PRICE() >=
-        //         mira.AUCTION_DROP_PER_STEP() * mira.AUCTION_DROP_INTERVAL()
-        // );
+    function testConfigSanity(uint32 timestamp) public {
+        mira.setAuctionStart(uint32(timestamp));
 
-        mira.setAuctionStart(uint32(block.timestamp - 10 seconds));
-        console.log(mira.getTimeTillDrop());
+        // Assert for any time in the after end auction price is auction end price
+        vm.warp(timestamp + mira.AUCTION_PRICE_CURVE_LENGTH());
+        assertEq(mira.getAuctionPrice(), mira.AUCTION_END_PRICE());
 
-        mira.setAuctionStart(uint32(block.timestamp + 10 seconds));
-        console.log(mira.getTimeTillDrop());
+        // Assert for any time in the before start auction price is auction start price
+        vm.warp(mira.auctionSaleStartTime() - 1 seconds);
+        assertEq(mira.getAuctionPrice(), mira.AUCTION_START_PRICE());
     }
 
     // @notice Test allowlist minting with merkle tree validation
@@ -118,6 +117,7 @@ contract ContractTest is DSTestPlus {
 
         // Successfully mint tokens
         mira.mintAllowlist{value: 3}(uint256(3), proof);
+        assertEq(mira.balanceOf(address(1337)), 3);
 
         // Expect revert already minted max mints
         vm.expectRevert(abi.encodePacked(bytes4(keccak256("AlreadyMinted()"))));
