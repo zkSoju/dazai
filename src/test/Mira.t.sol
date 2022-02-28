@@ -12,8 +12,7 @@ contract ContractTest is DSTestPlus {
     string public symbol = "MIRA";
     uint256 public allowlistMaxMint = 3;
     uint256 public publicMaxMint = 3;
-    uint256 public collectionSize = 10000;
-    uint256 public price = 1 wei;
+    uint256 public maxSupply = 10000;
     bytes32 public merkleRoot =
         0xc7b446a7bb5ff3ddb5be4b1e5540590bd76d810ec4b40d89afd926707410e218;
     uint256 public receivedEther = 0;
@@ -23,11 +22,10 @@ contract ContractTest is DSTestPlus {
         mira = new Mira(
             name,
             symbol,
-            collectionSize,
+            maxSupply,
             merkleRoot,
             allowlistMaxMint,
-            publicMaxMint,
-            price
+            publicMaxMint
         );
         mira.setBaseURI(_baseTokenURI);
     }
@@ -43,10 +41,9 @@ contract ContractTest is DSTestPlus {
                 keccak256(abi.encodePacked(symbol))
         );
         assert(mira.merkleRoot() == merkleRoot);
-        assert(mira.collectionSize() == collectionSize);
+        assert(mira.maxSupply() == maxSupply);
         assert(mira.allowlistMaxMint() == allowlistMaxMint);
         assert(mira.publicMaxMint() == publicMaxMint);
-        assert(mira.price() == price);
     }
 
     // @notice Test additional metadata sanity checks
@@ -130,7 +127,7 @@ contract ContractTest is DSTestPlus {
         mira.mintAllowlist(uint256(3), proof);
 
         // Validate mints
-        assert(mira.totalSupply() == uint256(3));
+        assert(mira.currentSupply() == uint256(3));
         assert(mira.allowlistClaimed(address(1337)) == uint256(3));
     }
 
@@ -162,40 +159,40 @@ contract ContractTest is DSTestPlus {
     }
 
     // @notice Test offchain signature validation
-    function testSignature() public {
-        startHoax(
-            address(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4),
-            address(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4)
-        );
+    // function testSignature() public {
+    //     startHoax(
+    //         address(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4),
+    //         address(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4)
+    //     );
 
-        // Ensure successful recovery of signer address
-        bytes
-            memory signature = hex"6c69643ab47e09b82e4a2bb692e412367ded1835d2ed7f569f7ba33a31a1559206237ec92e885fbe6bf54001b4ad73a08e44144ef0dde169e10734550ca5bde41c";
+    //     // Ensure successful recovery of signer address
+    //     bytes
+    //         memory signature = hex"6c69643ab47e09b82e4a2bb692e412367ded1835d2ed7f569f7ba33a31a1559206237ec92e885fbe6bf54001b4ad73a08e44144ef0dde169e10734550ca5bde41c";
 
-        bytes
-            memory fakeSignature = hex"8c69643ab47e09b82e4a2bb692e412367ded1835d2ed7f569f7ba33a31a1559206237ec92e885fbe6bf54001b4ad73a08e44144ef0dde169e10734550ca5bde41c";
+    //     bytes
+    //         memory fakeSignature = hex"8c69643ab47e09b82e4a2bb692e412367ded1835d2ed7f569f7ba33a31a1559206237ec92e885fbe6bf54001b4ad73a08e44144ef0dde169e10734550ca5bde41c";
 
-        bool isVerified = mira.verify(
-            0xcd9ed0433174d173b609ed57aa4b81fb9b9dc8b800fb0b7743d1d703bacf1b24,
-            signature
-        );
-        assertTrue(isVerified);
+    //     bool isVerified = mira.verify(
+    //         0xcd9ed0433174d173b609ed57aa4b81fb9b9dc8b800fb0b7743d1d703bacf1b24,
+    //         signature
+    //     );
+    //     assertTrue(isVerified);
 
-        // Assert false for incorrect RPC message hash of msg.sender
-        bool isFakeHash = mira.verify(
-            0xcd9ed0433174d173b609ed57aa4b81fb9b9dc8b800fb0b7743d1d703bacf1b88,
-            signature
-        );
-        assertTrue(!isFakeHash);
+    //     // Assert false for incorrect RPC message hash of msg.sender
+    //     bool isFakeHash = mira.verify(
+    //         0xcd9ed0433174d173b609ed57aa4b81fb9b9dc8b800fb0b7743d1d703bacf1b88,
+    //         signature
+    //     );
+    //     assertTrue(!isFakeHash);
 
-        // Expect revert for incorrect signature/signer
-        vm.expectRevert(abi.encodePacked("ECDSA: invalid signature"));
-        bool isFakeSigner = mira.verify(
-            0xcd9ed0433174d173b609ed57aa4b81fb9b9dc8b800fb0b7743d1d703bacf1b24,
-            fakeSignature
-        );
-        vm.stopPrank();
-    }
+    //     // Expect revert for incorrect signature/signer
+    //     vm.expectRevert(abi.encodePacked("ECDSA: invalid signature"));
+    //     bool isFakeSigner = mira.verify(
+    //         0xcd9ed0433174d173b609ed57aa4b81fb9b9dc8b800fb0b7743d1d703bacf1b24,
+    //         fakeSignature
+    //     );
+    //     vm.stopPrank();
+    // }
 
     // @notice Test public sale signed mint
     function testSignedMint() public {

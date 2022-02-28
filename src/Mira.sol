@@ -2,46 +2,45 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/access/Ownable.sol";
-import "@openzeppelin/security/ReentrancyGuard.sol";
-import "./ERC721A.sol";
+import {ERC721} from "@solmate/tokens/ERC721.sol";
 import "@openzeppelin/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/utils/cryptography/ECDSA.sol";
 
-/// @author Enigma Labs <gm@enigmalabs.gg>
-contract Mira is Ownable, ReentrancyGuard, ERC721A {
+/// @title Code Mira
+/// @author ZKRLabs (zkrlabs.com)
+/// @notice Gas-optimized ERC721A contract
+contract Mira is ERC721 {
+    /// @notice ECDSA library used for signature validation
     using ECDSA for bytes32;
+
+    /// @notice Merkle tree library used for validation of user address in allowlist tree
     using MerkleProof for bytes32[];
 
+    /// >>>>>>>>>>>>>>>>>>>>>>>>>  CUSTOM ERRORS   <<<<<<<<<<<<<<<<<<<<<<<<< ///
+
+    /// @notice Thrown if user address is not signed off or user is not an EOA
     error NotAuthorized();
+
+    /// @notice Thrown if user is not on the allowlist
     error NotAllowed();
+
+    /// @notice Thrown if user has reached maximum allowlist/public sale mints
     error AlreadyMinted();
+
+    /// @notice Thrown if insufficient ether value was supplied
     error InsufficientValue();
-    error ExceededMaxMints();
-    error UnsafeRecipient();
-    error InvalidAction();
 
-    //   struct SaleConfig {
-    //     uint32 auctionSaleStartTime;
-    //     uint32 publicSaleStartTime;
-    //     uint64 allowlistPrice;
-    //     uint64 publicPrice;
-    //     uint32 publicSaleKey;
-    //   }
+    /// @notice Thrown if execution leads to failure
+    error FailedAction();
 
-    //   SaleConfig public saleConfig;
+    /// >>>>>>>>>>>>>>>>>>>>>>>>>  IMMUTABLES   <<<<<<<<<<<<<<<<<<<<<<<<< ///
 
-    uint256 public allowlistMaxMint;
-    uint256 public publicMaxMint;
-    uint256 public collectionSize;
-    uint256 public price;
-    bytes32 public merkleRoot;
+    address public immutable owner;
 
-    address public signerAddress = 0x165A20A378DEb66e5eF349cbeA72302838F2B0AF;
-
-    string private _baseTokenURI;
-
-    uint32 public auctionSaleStartTime;
+    uint256 public immutable allowlistMaxMint;
+    uint256 public immutable publicMaxMint;
+    uint256 public immutable maxSupply;
+    uint256 public currentSupply;
 
     uint256 public constant AUCTION_START_PRICE = 150 wei;
     uint256 public constant AUCTION_END_PRICE = 15 wei;
@@ -51,23 +50,36 @@ contract Mira is Ownable, ReentrancyGuard, ERC721A {
         (AUCTION_START_PRICE - AUCTION_END_PRICE) /
             (AUCTION_PRICE_CURVE_LENGTH / AUCTION_DROP_INTERVAL);
 
+    uint256 public constant price = 0.01 ether;
+
+    /// >>>>>>>>>>>>>>>>>>>>>>>>>  CUSTOM STORAGE   <<<<<<<<<<<<<<<<<<<<<<<<< ///
+
+    string public baseTokenURI;
+
+    bytes32 public merkleRoot;
+
+    address public signerAddress = 0x165A20A378DEb66e5eF349cbeA72302838F2B0AF;
+
+    uint32 public auctionSaleStartTime;
+
     mapping(address => uint256) public allowlistClaimed;
     mapping(address => uint256) public publicClaimed;
+
+    /// >>>>>>>>>>>>>>>>>>>>>>>>>  CONSTRUCTOR   <<<<<<<<<<<<<<<<<<<<<<<<< ///
 
     constructor(
         string memory _name,
         string memory _symbol,
-        uint256 _collectionSize,
+        uint256 _maxSupply,
         bytes32 _merkleRoot,
         uint256 _allowlistMaxMint,
-        uint256 _publicMaxMint,
-        uint256 _price
-    ) ERC721A(_name, _symbol) {
-        collectionSize = _collectionSize;
+        uint256 _publicMaxMint
+    ) ERC721(_name, _symbol) {
+        maxSupply = _maxSupply;
         merkleRoot = _merkleRoot;
         allowlistMaxMint = _allowlistMaxMint;
         publicMaxMint = _publicMaxMint;
-        price = _price;
+        owner = msg.sender;
     }
 
     /// @dev Verify sender is a user and not a contract
@@ -75,6 +87,19 @@ contract Mira is Ownable, ReentrancyGuard, ERC721A {
         if (tx.origin != msg.sender) revert NotAuthorized();
         _;
     }
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert NotAuthorized();
+        _;
+    }
+
+    function tokenURI(uint256)
+        public
+        pure
+        virtual
+        override
+        returns (string memory)
+    {}
 
     /// @dev Verify account address exists in Merkle Tree
     function verifyAllowlist(bytes32[] calldata proof, address account)
@@ -91,6 +116,7 @@ contract Mira is Ownable, ReentrancyGuard, ERC721A {
         merkleRoot = _merkleRoot;
     }
 
+    /// @dev Calculate sender hash, based on eth_sign JSON RPC
     function _senderHash() internal view returns (bytes32) {
         return
             keccak256(
@@ -101,60 +127,61 @@ contract Mira is Ownable, ReentrancyGuard, ERC721A {
             );
     }
 
-    function verify(bytes32 _hash, bytes memory _signature)
-        public
+    /// @dev Validate computed sender hash matches input hash and recovered signer matches predefined signer address
+    function _verify(bytes32 hash, bytes memory signature)
+        internal
         view
         returns (bool)
     {
-        if (_senderHash() != _hash) {
+        if (_senderHash() != hash) {
             return false;
         }
-        return _hash.recover(_signature) == signerAddress;
+        return hash.recover(signature) == signerAddress;
     }
 
-    /// @dev Mint reserved quantity for marketing and development.
-    function mintReserved(uint256 _quantity) external onlyOwner {
-        _safeMint(msg.sender, _quantity);
+    /// @dev Safe mint reserved quantity for marketing and development
+    function mintReserved(uint256 quantity) external onlyOwner {
+        _safeMint(msg.sender, quantity);
     }
 
-    /// @dev Mint reserved quantity for marketing and development.
-    function mintAllowlist(uint256 _quantity, bytes32[] calldata _merkleProof)
+    /// @dev Mint for allowlist sale
+    function mintAllowlist(uint256 quantity, bytes32[] calldata proof)
         external
         payable
         callerIsUser
     {
-        if (!(verifyAllowlist(_merkleProof, msg.sender))) revert NotAllowed();
-        if (allowlistClaimed[msg.sender] + _quantity > allowlistMaxMint)
+        if (!(verifyAllowlist(proof, msg.sender))) revert NotAllowed();
+        if (allowlistClaimed[msg.sender] + quantity > allowlistMaxMint)
             revert AlreadyMinted();
-        if (msg.value < _quantity * price) revert InsufficientValue();
-        if (totalSupply() + _quantity > collectionSize) revert InvalidAction();
+        if (msg.value < quantity * price) revert InsufficientValue();
+        if (currentSupply + quantity > maxSupply) revert FailedAction();
 
-        allowlistClaimed[msg.sender] += _quantity;
-        _safeMint(msg.sender, _quantity);
+        allowlistClaimed[msg.sender] += quantity;
+        currentSupply += quantity;
+
+        _safeMint(msg.sender, quantity);
     }
 
-    /// @dev Mint for public sale, limited to `publicMaxMints`.
+    /// @dev Mint for public sale, limited to `publicMaxMints`
     function mintPublicSale(
-        uint256 _quantity,
-        bytes32 _hash,
-        bytes memory _signature
+        uint256 quantity,
+        bytes32 hash,
+        bytes memory signature
     ) external payable callerIsUser {
-        // SaleConfig memory config = saleConfig;
-        // uint256 publicSaleKey = uint256(config.publicSaleKey);
-        // uint256 publicPrice = uint256(config.publicPrice);
-        // uint256 publicSaleStartTime = uint256(config.publicSaleStartTime);
-        uint256 price = getAuctionPrice();
+        uint256 auctionPrice = getAuctionPrice();
 
-        if (!(verify(_hash, _signature))) revert NotAuthorized();
-        if (publicClaimed[msg.sender] + _quantity > publicMaxMint)
+        if (!(_verify(hash, signature))) revert NotAuthorized();
+        if (publicClaimed[msg.sender] + quantity > publicMaxMint)
             revert AlreadyMinted();
-        if (msg.value < _quantity * price) revert InsufficientValue();
-        if (totalSupply() + _quantity > collectionSize) revert InvalidAction();
+        if (msg.value < quantity * auctionPrice) revert InsufficientValue();
+        if (currentSupply + quantity > maxSupply) revert FailedAction();
 
-        publicClaimed[msg.sender] += _quantity;
+        publicClaimed[msg.sender] += quantity;
+        currentSupply += quantity;
 
-        _safeMint(msg.sender, _quantity);
-        uint256 refund = msg.value - price;
+        _safeMint(msg.sender, quantity);
+
+        uint256 refund = msg.value - auctionPrice;
         if (refund > 0) {
             payable(msg.sender).transfer(refund);
         }
@@ -201,16 +228,16 @@ contract Mira is Ownable, ReentrancyGuard, ERC721A {
     //   }
 
     /// @dev Transfer contract funds to owner address.
-    function withdrawFunds() external onlyOwner nonReentrant {
+    function withdrawFunds() external onlyOwner {
         (bool success, ) = msg.sender.call{value: address(this).balance}("");
-        if (!success) revert InvalidAction();
+        if (!success) revert FailedAction();
     }
 
-    function _baseURI() internal view virtual override returns (string memory) {
-        return _baseTokenURI;
+    function _baseURI() internal view virtual returns (string memory) {
+        return baseTokenURI;
     }
 
-    function setBaseURI(string calldata baseURI) external onlyOwner {
-        _baseTokenURI = baseURI;
+    function setBaseURI(string calldata uri) external onlyOwner {
+        baseTokenURI = uri;
     }
 }
