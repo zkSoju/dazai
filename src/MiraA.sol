@@ -2,14 +2,16 @@
 
 pragma solidity 0.8.11;
 
-import {ERC721} from "@solmate/tokens/ERC721.sol";
+import "@openzeppelin/access/Ownable.sol";
+import "@openzeppelin/security/ReentrancyGuard.sol";
+import "./ERC721A.sol";
 import "@openzeppelin/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/utils/cryptography/ECDSA.sol";
 
 /// @title Code Mira
 /// @author ZKRLabs (zkrlabs.com)
-/// @notice Gas-optimized ERC721 contract
-contract Mira is ERC721 {
+/// @notice Gas-optimized ERC721A contract
+contract MiraA is ERC721A {
     /// @notice ECDSA library used for signature validation
     using ECDSA for bytes32;
 
@@ -75,7 +77,7 @@ contract Mira is ERC721 {
         bytes32 _merkleRoot,
         uint256 _allowlistMaxMint,
         uint256 _publicMaxMint
-    ) ERC721(_name, _symbol) {
+    ) ERC721A(_name, _symbol) {
         maxSupply = _maxSupply;
         merkleRoot = _merkleRoot;
         allowlistMaxMint = _allowlistMaxMint;
@@ -155,13 +157,11 @@ contract Mira is ERC721 {
         if (allowlistClaimed[msg.sender] + quantity > allowlistMaxMint)
             revert AlreadyMinted();
         if (msg.value < quantity * price) revert InsufficientValue();
-        if (currentSupply + quantity > maxSupply) revert FailedAction();
+        if (totalSupply() + quantity > maxSupply) revert FailedAction();
 
         allowlistClaimed[msg.sender] += quantity;
 
-        for (uint256 i = 0; i < quantity; ++i) {
-            _safeMint(msg.sender, currentSupply + i);
-        }
+        _safeMint(msg.sender, quantity);
 
         currentSupply += quantity;
     }
@@ -178,10 +178,9 @@ contract Mira is ERC721 {
         if (publicClaimed[msg.sender] + quantity > publicMaxMint)
             revert AlreadyMinted();
         if (msg.value < quantity * auctionPrice) revert InsufficientValue();
-        if (currentSupply + quantity > maxSupply) revert FailedAction();
+        if (totalSupply() + quantity > maxSupply) revert FailedAction();
 
         publicClaimed[msg.sender] += quantity;
-        currentSupply += quantity;
 
         _safeMint(msg.sender, quantity);
 
@@ -237,7 +236,7 @@ contract Mira is ERC721 {
         if (!success) revert FailedAction();
     }
 
-    function _baseURI() internal view virtual returns (string memory) {
+    function _baseURI() internal view virtual override returns (string memory) {
         return baseTokenURI;
     }
 

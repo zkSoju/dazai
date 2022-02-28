@@ -1,46 +1,38 @@
-# Forge Template
+# Mira Smart Contracts
 
-A template for quickly getting started with forge
+## Overview
 
-## Getting Started
+- [ ] Merkle Tree whitelists
+- [ ] Dutch auction
+- [ ] Signed transactions
+- [ ] Gas optimizations
 
-```
-mkdir my-project
-cd my-project
-forge init --template https://github.com/FrankieIsLost/forge-template
-git submodule update --init --recursive  ## initialize submodule dependencies
-npm install ## install development dependencies
-forge build
-forge test
-```
+  - [ ] Custom Errors
+  - [ ] Bulk Minting
 
-## Features
+# Additional Notes
 
-### Testing Utilities
+- Usage of Solmate strips out `currentSupply()` and incorporates gas optimizations like unchecked counters because it's impossible to underflow or overflow due to prior checks.
 
-Includes a `Utilities.sol` contract with common testing methods (like creating users with an initial balance), as well as various other utility contracts.
+- Usage of ERC721 incorporates batch minting optimizations that make initial singular mint slightly more costly, but subsequent significantly less compared to OZ.
 
-### Preinstalled dependencies
-
-`ds-test` for testing, `forge-std` for better cheatcode UX, and `solmate` for optimized contract implementations.  
-
-### Linting
-
-Pre-configured `solhint` and `prettier-plugin-solidity`. Can be run by
+## Testing Results
 
 ```
-npm run solhint
-npm run prettier
+ERC721ATest:testIsolatedMultiMint() (gas: 152114)
+ERC721ATest:testIsolatedSingleMint() (gas: 132123)
+
+SolmateTest:testIsolatedMultiMint() (gas: 331775)
+SolmateTest:testIsolatedSingleMint() (gas: 105369)
 ```
 
-### CI with Github Actions
+# Acknowledgements
 
-Automatically run linting and tests on pull requests.
-
-### Default Configuration
-
-Including `.gitignore`, `.vscode`, `remappings.txt`
-
-## Acknowledgement
-
-Inspired by great dapptools templates like https://github.com/gakonst/forge-template, https://github.com/gakonst/dapptools-template and https://github.com/transmissions11/dapptools-template
+- [erc721a](https://github.com/chiru-labs/ERC721A)
+- [foundry](https://github.com/gakonst/foundry)
+- [solmate](https://github.com/Rari-Capital/solmate)
+- [forge-std](https://github.com/brockelmore/forge-std)
+- [clones-with-immutable-args](https://github.com/wighawag/clones-with-immutable-args)
+- [foundry-toolchain](https://github.com/onbjerg/foundry-toolchain) by [onbjerg](https://github.com/onbjerg)
+- [forge-template](https://github.com/abigger87/foundry-starter) by [abigger87](https://github.com/abigger87)
+- [Georgios Konstantopoulos](https://github.com/gakonst) for [forge-template](https://github.com/gakonst/forge-template) resource

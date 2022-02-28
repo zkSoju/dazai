@@ -2,11 +2,11 @@
 pragma solidity >=0.8.0;
 
 import {DSTestPlus} from "./utils/DSTestPlus.sol";
-import {Mira} from "../Mira.sol";
+import {MiraA} from "../MiraA.sol";
 import {console} from "./utils/Console.sol";
 
-contract SolmateTest is DSTestPlus {
-    Mira mira;
+contract ERC721ATest is DSTestPlus {
+    MiraA mira;
 
     string public name = "Mira";
     string public symbol = "MIRA";
@@ -25,7 +25,7 @@ contract SolmateTest is DSTestPlus {
     bytes32[] public badProof = new bytes32[](2);
 
     function setUp() public {
-        mira = new Mira(
+        mira = new MiraA(
             name,
             symbol,
             maxSupply,
@@ -48,9 +48,6 @@ contract SolmateTest is DSTestPlus {
         badProof[
             1
         ] = 0x972a69aadb9fb2dd5e3d4936ac6c01ebf152fc475a5f13a2ba0c5cf039d11064;
-
-        vm.label(address(1337), "1337");
-        vm.label(address(0xBEEF), "BEEF");
     }
 
     // @notice Test metadata and immutable config
@@ -84,6 +81,11 @@ contract SolmateTest is DSTestPlus {
 
     // @notice Test allowlist minting with merkle tree validation
     // function testMintSafety() public {
+    //     // Parse merkle proof
+
+    //     vm.label(address(1337), "1337");
+    //     vm.label(address(0xBEEF), "BEEF");
+
     //     // Check if address is on allowlist
     //     mira.verifyAllowlist(proof, address(1337));
     //     mira.verifyAllowlist(proof, address(0xBEEF));

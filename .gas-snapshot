@@ -1,0 +1,18 @@
+ERC721ATest:testConfig() (gas: 10492)
+ERC721ATest:testConfigSanity() (gas: 32242)
+
+ERC721ATest:testSignedMintSafety() (gas: 74719)
+ERC721ATest:testWithdrawSafety() (gas: 144810)
+SolmateTest:testConfig() (gas: 10400)
+SolmateTest:testConfigSanity() (gas: 29744)
+
+SolmateTest:testSignedMintSafety() (gas: 72365)
+SolmateTest:testWithdrawSafety() (gas: 140939)
+
+## Significant savings on multiple mints
+
+ERC721ATest:testIsolatedMultiMint() (gas: 152114)
+ERC721ATest:testIsolatedSingleMint() (gas: 132123)
+
+SolmateTest:testIsolatedMultiMint() (gas: 331775)
+SolmateTest:testIsolatedSingleMint() (gas: 105369)
