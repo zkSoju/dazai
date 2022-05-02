@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.11;
+pragma solidity 0.8.13;
 
 import "@openzeppelin/access/Ownable.sol";
 import "@openzeppelin/security/ReentrancyGuard.sol";
@@ -8,10 +8,10 @@ import "./ERC721A.sol";
 import "@openzeppelin/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/utils/cryptography/ECDSA.sol";
 
-/// @title Code Mira
+/// @title Dazai
 /// @author ZKRLabs (zkrlabs.com)
-/// @notice Gas-optimized ERC721A contract
-contract MiraA is ERC721A {
+/// @notice ERC721 Sandbox
+contract Dazai is ERC721A {
     /// @notice ECDSA library used for signature validation
     using ECDSA for bytes32;
 

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity >=0.8.0;
 
-import {DSTestPlus} from "./utils/DSTestPlus.sol";
-import {Mira} from "../Mira.sol";
-import {console} from "./utils/Console.sol";
+import {Dazai} from "../Dazai.sol";
 
-contract SolmateTest is DSTestPlus {
-    Mira mira;
+import "@std/Test.sol";
 
-    string public name = "Mira";
-    string public symbol = "MIRA";
+contract DazaiTest is Test {
+    Dazai dazai;
+
+    string public name = "Dazai";
+    string public symbol = "DZA";
     uint256 public allowlistMaxMint = 10;
     uint256 public publicMaxMint = 10;
     uint256 public maxSupply = 10000;
@@ -25,7 +25,7 @@ contract SolmateTest is DSTestPlus {
     bytes32[] public badProof = new bytes32[](2);
 
     function setUp() public {
-        mira = new Mira(
+        dazai = new dazaiA(
             name,
             symbol,
             maxSupply,
@@ -33,7 +33,7 @@ contract SolmateTest is DSTestPlus {
             allowlistMaxMint,
             publicMaxMint
         );
-        mira.setBaseURI(_baseTokenURI);
+        dazai.setBaseURI(_baseTokenURI);
 
         proof[
             0
@@ -48,50 +48,52 @@ contract SolmateTest is DSTestPlus {
         badProof[
             1
         ] = 0x972a69aadb9fb2dd5e3d4936ac6c01ebf152fc475a5f13a2ba0c5cf039d11064;
-
-        vm.label(address(1337), "1337");
-        vm.label(address(0xBEEF), "BEEF");
     }
 
     // @notice Test metadata and immutable config
     function testConfig() public {
         assert(
-            keccak256(abi.encodePacked(mira.name())) ==
+            keccak256(abi.encodePacked(dazai.name())) ==
                 keccak256(abi.encodePacked(name))
         );
         assert(
-            keccak256(abi.encodePacked(mira.symbol())) ==
+            keccak256(abi.encodePacked(dazai.symbol())) ==
                 keccak256(abi.encodePacked(symbol))
         );
-        assert(mira.merkleRoot() == merkleRoot);
-        assert(mira.maxSupply() == maxSupply);
-        assert(mira.allowlistMaxMint() == allowlistMaxMint);
-        assert(mira.publicMaxMint() == publicMaxMint);
+        assert(dazai.merkleRoot() == merkleRoot);
+        assert(dazai.maxSupply() == maxSupply);
+        assert(dazai.allowlistMaxMint() == allowlistMaxMint);
+        assert(dazai.publicMaxMint() == publicMaxMint);
     }
 
     // @notice Test additional metadata sanity checks
     function testConfigSanity() public {
-        mira.setAuctionStart(block.timestamp);
+        dazai.setAuctionStart(block.timestamp);
 
         // Assert for any time in the after end auction price is auction end price
-        vm.warp(block.timestamp + mira.AUCTION_PRICE_CURVE_LENGTH());
-        assertEq(mira.getAuctionPrice(), mira.AUCTION_END_PRICE());
+        vm.warp(block.timestamp + dazai.AUCTION_PRICE_CURVE_LENGTH());
+        assertEq(dazai.getAuctionPrice(), dazai.AUCTION_END_PRICE());
 
         // Assert for any time in the before start auction price is auction start price
-        vm.warp(mira.auctionSaleStartTime() - 1 seconds);
-        assertEq(mira.getAuctionPrice(), mira.AUCTION_START_PRICE());
+        vm.warp(dazai.auctionSaleStartTime() - 1 seconds);
+        assertEq(dazai.getAuctionPrice(), dazai.AUCTION_START_PRICE());
     }
 
     // @notice Test allowlist minting with merkle tree validation
     // function testMintSafety() public {
+    //     // Parse merkle proof
+
+    //     vm.label(address(1337), "1337");
+    //     vm.label(address(0xBEEF), "BEEF");
+
     //     // Check if address is on allowlist
-    //     mira.verifyAllowlist(proof, address(1337));
-    //     mira.verifyAllowlist(proof, address(0xBEEF));
+    //     dazai.verifyAllowlist(proof, address(1337));
+    //     dazai.verifyAllowlist(proof, address(0xBEEF));
 
     //     // Expect revert minted from smart contract not user wallet
     //     hoax(address(1337));
     //     vm.expectRevert(abi.encodePacked(bytes4(keccak256("NotAuthorized()"))));
-    //     mira.mintAllowlist(uint256(3), proof);
+    //     dazai.mintAllowlist(uint256(3), proof);
 
     //     // Set tx.origin and msg.sender for user address testing
     //     startHoax(address(1337), address(1337));
@@ -100,41 +102,41 @@ contract SolmateTest is DSTestPlus {
     //     vm.expectRevert(
     //         abi.encodePacked(bytes4(keccak256("InsufficientValue()")))
     //     );
-    //     mira.mintAllowlist(uint256(3), proof);
+    //     dazai.mintAllowlist(uint256(3), proof);
 
     //     // Expect revert not enough ether provided
     //     vm.expectRevert(
     //         abi.encodePacked(bytes4(keccak256("InsufficientValue()")))
     //     );
-    //     mira.mintAllowlist{value: 1}(uint256(3), proof);
+    //     dazai.mintAllowlist{value: 1}(uint256(3), proof);
 
     //     // Expect revert no ether sent
     //     vm.expectRevert(
     //         abi.encodePacked(bytes4(keccak256("InsufficientValue()")))
     //     );
-    //     mira.mintAllowlist(uint256(3), proof);
+    //     dazai.mintAllowlist(uint256(3), proof);
 
     //     // Expect revert bad proof submitted
     //     vm.expectRevert(abi.encodePacked(bytes4(keccak256("NotAllowed()"))));
-    //     mira.mintAllowlist(uint256(3), badProof);
+    //     dazai.mintAllowlist(uint256(3), badProof);
 
     //     // Successfully mint tokens
-    //     mira.mintAllowlist{value: 3}(uint256(3), proof);
-    //     assertEq(mira.balanceOf(address(1337)), 3);
+    //     dazai.mintAllowlist{value: 3}(uint256(3), proof);
+    //     assertEq(dazai.balanceOf(address(1337)), 3);
 
     //     // Expect revert already minted max mints
     //     vm.expectRevert(abi.encodePacked(bytes4(keccak256("AlreadyMinted()"))));
-    //     mira.mintAllowlist(uint256(3), proof);
+    //     dazai.mintAllowlist(uint256(3), proof);
     //     vm.stopPrank();
 
     //     // Expect revert invalid proof + not on allowlist
     //     hoax(address(0xBEEF), address(0xBEEF));
     //     vm.expectRevert(abi.encodePacked(bytes4(keccak256("NotAllowed()"))));
-    //     mira.mintAllowlist(uint256(3), proof);
+    //     dazai.mintAllowlist(uint256(3), proof);
 
     //     // Validate mints
-    //     assert(mira.currentSupply() == uint256(3));
-    //     assert(mira.allowlistClaimed(address(1337)) == uint256(3));
+    //     assert(dazai.currentSupply() == uint256(3));
+    //     assert(dazai.allowlistClaimed(address(1337)) == uint256(3));
     // }
 
     // @notice Test owner withdraw
@@ -142,15 +144,15 @@ contract SolmateTest is DSTestPlus {
         // Non-owner shouldn't be able to withdraw
         hoax(address(0xBEEF), address(0xBEEF));
         vm.expectRevert(abi.encodePacked(bytes4(keccak256("NotAuthorized()"))));
-        mira.withdrawFunds();
+        dazai.withdrawFunds();
 
         // Foward successful mint funds to contract balance
         hoax(address(1337), address(1337));
-        mira.mintAllowlist{value: 2}(2, proof);
+        dazai.mintAllowlist{value: 2}(2, proof);
 
         // Successful withdraw as owner
         uint256 beforeBalance = address(this).balance;
-        mira.withdrawFunds();
+        dazai.withdrawFunds();
         uint256 afterBalance = address(this).balance;
         assert(afterBalance - beforeBalance == uint256(2));
     }
@@ -169,14 +171,14 @@ contract SolmateTest is DSTestPlus {
     //     bytes
     //         memory fakeSignature = hex"8c69643ab47e09b82e4a2bb692e412367ded1835d2ed7f569f7ba33a31a1559206237ec92e885fbe6bf54001b4ad73a08e44144ef0dde169e10734550ca5bde41c";
 
-    //     bool isVerified = mira.verify(
+    //     bool isVerified = dazai.verify(
     //         0xcd9ed0433174d173b609ed57aa4b81fb9b9dc8b800fb0b7743d1d703bacf1b24,
     //         signature
     //     );
     //     assertTrue(isVerified);
 
     //     // Assert false for incorrect RPC message hash of msg.sender
-    //     bool isFakeHash = mira.verify(
+    //     bool isFakeHash = dazai.verify(
     //         0xcd9ed0433174d173b609ed57aa4b81fb9b9dc8b800fb0b7743d1d703bacf1b88,
     //         signature
     //     );
@@ -184,7 +186,7 @@ contract SolmateTest is DSTestPlus {
 
     //     // Expect revert for incorrect signature/signer
     //     vm.expectRevert(abi.encodePacked("ECDSA: invalid signature"));
-    //     bool isFakeSigner = mira.verify(
+    //     bool isFakeSigner = dazai.verify(
     //         0xcd9ed0433174d173b609ed57aa4b81fb9b9dc8b800fb0b7743d1d703bacf1b24,
     //         fakeSignature
     //     );
@@ -224,42 +226,42 @@ contract SolmateTest is DSTestPlus {
         vm.expectRevert(
             abi.encodePacked(bytes4(keccak256("InsufficientValue()")))
         );
-        mira.mintPublicSale{value: 0}(uint256(1), senderHash, signature);
+        dazai.mintPublicSale{value: 0}(uint256(1), senderHash, signature);
 
         // Expect revert fake credentials
         vm.expectRevert(abi.encodePacked(bytes4(keccak256("NotAuthorized()"))));
-        mira.mintPublicSale{value: 1}(
+        dazai.mintPublicSale{value: 1}(
             uint256(1),
             incorrectSenderHash,
             signature
         );
 
         vm.expectRevert(abi.encodePacked(bytes4(keccak256("NotAuthorized()"))));
-        mira.mintPublicSale{value: 1}(
+        dazai.mintPublicSale{value: 1}(
             uint256(1),
             incorrectSenderHash,
             fakeSignature
         );
 
         vm.expectRevert(abi.encodePacked("ECDSA: invalid signature"));
-        mira.mintPublicSale{value: 1}(uint256(1), senderHash, fakeSignature);
+        dazai.mintPublicSale{value: 1}(uint256(1), senderHash, fakeSignature);
 
         // Ensure successful mint provided correct credentials
         vm.expectRevert(
             abi.encodePacked(bytes4(keccak256("InsufficientValue()")))
         );
-        mira.mintPublicSale{value: 1}(uint256(1), senderHash, signature);
+        dazai.mintPublicSale{value: 1}(uint256(1), senderHash, signature);
         vm.stopPrank();
     }
 
     function testIsolatedSingleMint() public {
         hoax(address(1337), address(1337));
-        mira.mintAllowlist{value: 1}(1, proof);
+        dazai.mintAllowlist{value: 1}(1, proof);
     }
 
     function testIsolatedMultiMint() public {
         hoax(address(1337), address(1337));
-        mira.mintAllowlist{value: 10}(10, proof);
+        dazai.mintAllowlist{value: 10}(10, proof);
     }
 
     fallback() external payable {}
